@@ -2,6 +2,7 @@ import { useReducer } from 'react';
 import { Display } from '../../components';
 import { evaluateExpression } from '../../engine';
 import { BasicKeypad, type BasicOperator } from './keypads/BasicKeypad';
+import { ScientificKeypad } from './keypads/ScientificKeypad';
 
 interface CalculatorState {
   expression: string;
@@ -13,10 +14,13 @@ interface CalculatorState {
 type CalculatorAction =
   | { type: 'digit'; value: string }
   | { type: 'decimal' }
-  | { type: 'operator'; value: BasicOperator }
+  | { type: 'operator'; value: CalculatorOperator }
+  | { type: 'insert'; value: string; continueFromResult?: boolean }
   | { type: 'clear' }
   | { type: 'delete' }
   | { type: 'evaluate' };
+
+type CalculatorOperator = BasicOperator | '^';
 
 const initialState: CalculatorState = {
   expression: '',
@@ -42,6 +46,13 @@ export function Calculator() {
         result={state.result}
         error={state.error}
       />
+      <ScientificKeypad
+        onInsert={(value) => dispatch({ type: 'insert', value })}
+        onContinueFromResult={(value) =>
+          dispatch({ type: 'insert', value, continueFromResult: true })
+        }
+        onPower={() => dispatch({ type: 'operator', value: '^' })}
+      />
       <BasicKeypad
         onDigit={(value) => dispatch({ type: 'digit', value })}
         onDecimal={() => dispatch({ type: 'decimal' })}
@@ -65,6 +76,8 @@ function calculatorReducer(
       return appendDecimal(state);
     case 'operator':
       return appendOperator(state, action.value);
+    case 'insert':
+      return appendText(state, action.value, action.continueFromResult);
     case 'clear':
       return initialState;
     case 'delete':
@@ -109,7 +122,7 @@ function appendDecimal(state: CalculatorState): CalculatorState {
 
 function appendOperator(
   state: CalculatorState,
-  operator: BasicOperator,
+  operator: CalculatorOperator,
 ): CalculatorState {
   const sourceExpression =
     state.hasEvaluated && state.result && !state.error
@@ -136,6 +149,29 @@ function appendOperator(
 
   return {
     expression: `${expressionWithoutTrailingOperator} ${operator} `,
+    hasEvaluated: false,
+  };
+}
+
+function appendText(
+  state: CalculatorState,
+  value: string,
+  continueFromResult = false,
+): CalculatorState {
+  if (continueFromResult && !state.expression.trim() && !state.result) {
+    return state;
+  }
+
+  if (state.hasEvaluated && !state.error) {
+    return {
+      expression:
+        continueFromResult && state.result ? `${state.result}${value}` : value,
+      hasEvaluated: false,
+    };
+  }
+
+  return {
+    expression: `${state.expression}${value}`,
     hasEvaluated: false,
   };
 }
@@ -179,13 +215,13 @@ function evaluateCurrentExpression(state: CalculatorState): CalculatorState {
 }
 
 function getCurrentNumberFragment(expression: string): string {
-  const match = expression.trimEnd().match(/(?:^|[+\-−×÷%]\s*)([0-9.]+)$/);
+  const match = expression.trimEnd().match(/(?:^|[+\-−×÷%^]\s*)([0-9.]+)$/);
 
   return match?.[1] ?? '';
 }
 
 function hasTrailingOperator(expression: string): boolean {
-  return /[+−×÷%]$/.test(expression);
+  return /[+−×÷%^]$/.test(expression);
 }
 
 function formatNumber(value: number): string {
