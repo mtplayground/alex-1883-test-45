@@ -33,9 +33,10 @@ export function Display({
           className={
             error
               ? 'break-words font-mono text-xl font-semibold leading-tight text-rose-300'
-              : 'overflow-hidden text-ellipsis whitespace-nowrap font-mono text-4xl font-semibold leading-tight text-white'
+              : 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-4xl font-semibold leading-tight text-white tabular-nums'
           }
           role={error ? 'alert' : undefined}
+          title={visibleResult}
         >
           {visibleResult}
         </p>
