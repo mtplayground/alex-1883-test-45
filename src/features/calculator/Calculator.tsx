@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useState } from 'react';
 import { Display } from '../../components';
 import { evaluateExpression } from '../../engine';
+import type { EvaluationError } from '../../engine';
 import { BasicKeypad, type BasicOperator } from './keypads/BasicKeypad';
 import { ScientificKeypad } from './keypads/ScientificKeypad';
 
@@ -27,6 +28,9 @@ const initialState: CalculatorState = {
   expression: '',
   hasEvaluated: false,
 };
+
+const standardNotationUpperBound = 1_000_000_000_000;
+const standardNotationLowerBound = 0.000_000_001;
 
 export function Calculator() {
   const [state, dispatch] = useReducer(calculatorReducer, initialState);
@@ -359,7 +363,7 @@ function evaluateCurrentExpression(state: CalculatorState): CalculatorState {
   if (!evaluation.ok) {
     return {
       expression,
-      error: evaluation.error.message,
+      error: formatEvaluationError(evaluation.error),
       hasEvaluated: true,
     };
   }
@@ -382,9 +386,56 @@ function hasTrailingOperator(expression: string): boolean {
 }
 
 function formatNumber(value: number): string {
-  if (Number.isInteger(value)) {
-    return value.toString();
+  if (!Number.isFinite(value)) {
+    return 'Result is too large';
   }
 
-  return Number.parseFloat(value.toPrecision(12)).toString();
+  if (Object.is(value, -0)) {
+    return '0';
+  }
+
+  const absoluteValue = Math.abs(value);
+
+  if (
+    absoluteValue !== 0 &&
+    (absoluteValue >= standardNotationUpperBound ||
+      absoluteValue < standardNotationLowerBound)
+  ) {
+    return trimExponentialNotation(value.toExponential(10));
+  }
+
+  const roundedValue = Number.parseFloat(value.toPrecision(12));
+
+  return Object.is(roundedValue, -0) ? '0' : roundedValue.toString();
+}
+
+function trimExponentialNotation(value: string): string {
+  return value
+    .replace(/(\.\d*?[1-9])0+e/, '$1e')
+    .replace(/\.0+e/, 'e')
+    .replace('e+', 'e');
+}
+
+function formatEvaluationError(error: EvaluationError): string {
+  switch (error.code) {
+    case 'EMPTY_EXPRESSION':
+      return 'Enter an expression';
+    case 'INVALID_CHARACTER':
+      return 'Unsupported character';
+    case 'INVALID_NUMBER':
+      return 'Check the number format';
+    case 'UNKNOWN_FUNCTION':
+      return 'Unknown function';
+    case 'UNEXPECTED_TOKEN':
+    case 'MISSING_CLOSING_PAREN':
+      return 'Check expression syntax';
+    case 'DIVIDE_BY_ZERO':
+      return 'Cannot divide by zero';
+    case 'INVALID_ARGUMENTS':
+      return 'Check function arguments';
+    case 'DOMAIN_ERROR':
+      return 'Input outside valid range';
+    case 'NON_FINITE_RESULT':
+      return 'Result is too large';
+  }
 }

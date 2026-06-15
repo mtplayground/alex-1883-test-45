@@ -67,6 +67,37 @@ test.describe('calculator core flows', () => {
 
     await expectDisplayResult(page, '14');
   });
+
+  test('shows graceful error text for invalid expressions and overflow', async ({
+    page,
+  }) => {
+    await page.keyboard.press('1');
+    await page.keyboard.press('+');
+    await page.keyboard.press('Enter');
+
+    await expectDisplayResult(page, 'Check expression syntax');
+
+    await page.getByRole('button', { name: 'Clear' }).click();
+    await page.getByRole('radio', { name: 'Scientific' }).click();
+    await page.getByRole('button', { name: 'Digit 9' }).click();
+    await page.getByRole('button', { name: 'Power' }).click();
+    await page.getByRole('button', { name: 'Digit 9' }).click();
+    await page.getByRole('button', { name: 'Digit 9' }).click();
+    await page.getByRole('button', { name: 'Digit 9' }).click();
+    await page.getByRole('button', { name: 'Digit 9' }).click();
+    await page.getByRole('button', { name: 'Evaluate' }).click();
+
+    await expectDisplayResult(page, 'Result is too large');
+  });
+
+  test('formats long tiny results with compact scientific notation', async ({
+    page,
+  }) => {
+    await page.keyboard.type('1/3000000000000');
+    await page.keyboard.press('Enter');
+
+    await expectDisplayResult(page, '3.3333333333e-13');
+  });
 });
 
 async function expectDisplayResult(page: Page, expected: string) {
