@@ -1,4 +1,4 @@
-import { useReducer } from 'react';
+import { useReducer, useState } from 'react';
 import { Display } from '../../components';
 import { evaluateExpression } from '../../engine';
 import { BasicKeypad, type BasicOperator } from './keypads/BasicKeypad';
@@ -21,6 +21,7 @@ type CalculatorAction =
   | { type: 'evaluate' };
 
 type CalculatorOperator = BasicOperator | '^';
+type CalculatorMode = 'basic' | 'scientific';
 
 const initialState: CalculatorState = {
   expression: '',
@@ -29,6 +30,8 @@ const initialState: CalculatorState = {
 
 export function Calculator() {
   const [state, dispatch] = useReducer(calculatorReducer, initialState);
+  const [mode, setMode] = useState<CalculatorMode>('basic');
+  const isScientificMode = mode === 'scientific';
 
   return (
     <section
@@ -46,13 +49,16 @@ export function Calculator() {
         result={state.result}
         error={state.error}
       />
-      <ScientificKeypad
-        onInsert={(value) => dispatch({ type: 'insert', value })}
-        onContinueFromResult={(value) =>
-          dispatch({ type: 'insert', value, continueFromResult: true })
-        }
-        onPower={() => dispatch({ type: 'operator', value: '^' })}
-      />
+      <ModeToggle mode={mode} onModeChange={setMode} />
+      {isScientificMode ? (
+        <ScientificKeypad
+          onInsert={(value) => dispatch({ type: 'insert', value })}
+          onContinueFromResult={(value) =>
+            dispatch({ type: 'insert', value, continueFromResult: true })
+          }
+          onPower={() => dispatch({ type: 'operator', value: '^' })}
+        />
+      ) : null}
       <BasicKeypad
         onDigit={(value) => dispatch({ type: 'digit', value })}
         onDecimal={() => dispatch({ type: 'decimal' })}
@@ -62,6 +68,64 @@ export function Calculator() {
         onEvaluate={() => dispatch({ type: 'evaluate' })}
       />
     </section>
+  );
+}
+
+interface ModeToggleProps {
+  mode: CalculatorMode;
+  onModeChange: (mode: CalculatorMode) => void;
+}
+
+function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
+  return (
+    <div
+      className="mt-4 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1"
+      role="radiogroup"
+      aria-label="Calculator mode"
+    >
+      <ModeToggleButton
+        label="Basic"
+        value="basic"
+        isActive={mode === 'basic'}
+        onModeChange={onModeChange}
+      />
+      <ModeToggleButton
+        label="Scientific"
+        value="scientific"
+        isActive={mode === 'scientific'}
+        onModeChange={onModeChange}
+      />
+    </div>
+  );
+}
+
+interface ModeToggleButtonProps {
+  label: string;
+  value: CalculatorMode;
+  isActive: boolean;
+  onModeChange: (mode: CalculatorMode) => void;
+}
+
+function ModeToggleButton({
+  label,
+  value,
+  isActive,
+  onModeChange,
+}: ModeToggleButtonProps) {
+  return (
+    <button
+      type="button"
+      className={
+        isActive
+          ? 'rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-950 shadow-sm'
+          : 'rounded-md px-3 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-950'
+      }
+      role="radio"
+      aria-checked={isActive}
+      onClick={() => onModeChange(value)}
+    >
+      {label}
+    </button>
   );
 }
 
