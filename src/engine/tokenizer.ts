@@ -1,4 +1,10 @@
-import type { Operator, Result, Token, TokenizeResult } from './types';
+import type {
+  FunctionName,
+  Operator,
+  Result,
+  Token,
+  TokenizeResult,
+} from './types';
 
 const operatorMap = new Map<string, Operator>([
   ['+', '+'],
@@ -9,6 +15,7 @@ const operatorMap = new Map<string, Operator>([
   ['/', '/'],
   ['÷', '/'],
   ['%', '%'],
+  ['^', '^'],
 ]);
 
 export function tokenizeExpression(expression: string): TokenizeResult {
@@ -35,6 +42,23 @@ export function tokenizeExpression(expression: string): TokenizeResult {
       continue;
     }
 
+    if (char === ',') {
+      tokens.push({ kind: 'comma', raw: char, position: index });
+      index += 1;
+      continue;
+    }
+
+    if (expression.startsWith('**', index)) {
+      tokens.push({
+        kind: 'operator',
+        value: '^',
+        raw: '**',
+        position: index,
+      });
+      index += 2;
+      continue;
+    }
+
     const operator = operatorMap.get(char);
     if (operator) {
       tokens.push({
@@ -44,6 +68,29 @@ export function tokenizeExpression(expression: string): TokenizeResult {
         position: index,
       });
       index += 1;
+      continue;
+    }
+
+    if (char === '√') {
+      tokens.push({
+        kind: 'function',
+        value: 'sqrt',
+        raw: char,
+        position: index,
+      });
+      index += 1;
+      continue;
+    }
+
+    if (isIdentifierStart(char)) {
+      const functionResult = readFunction(expression, index);
+
+      if (!functionResult.ok) {
+        return functionResult;
+      }
+
+      tokens.push(functionResult.value.token);
+      index = functionResult.value.nextIndex;
       continue;
     }
 
@@ -71,6 +118,44 @@ export function tokenizeExpression(expression: string): TokenizeResult {
   }
 
   return { ok: true, value: tokens };
+}
+
+function readFunction(
+  expression: string,
+  start: number,
+): Result<{ token: Token; nextIndex: number }> {
+  let index = start;
+
+  while (index < expression.length && isIdentifierPart(expression[index])) {
+    index += 1;
+  }
+
+  const raw = expression.slice(start, index);
+  const normalized = raw.toLowerCase();
+
+  if (!isFunctionName(normalized)) {
+    return {
+      ok: false,
+      error: {
+        code: 'UNKNOWN_FUNCTION',
+        message: `Unknown function "${raw}".`,
+        position: start,
+      },
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      token: {
+        kind: 'function',
+        value: normalized,
+        raw,
+        position: start,
+      },
+      nextIndex: index,
+    },
+  };
 }
 
 function readNumber(
@@ -140,6 +225,28 @@ function readNumber(
 
 function isDigit(value: string): boolean {
   return value >= '0' && value <= '9';
+}
+
+function isIdentifierStart(value: string): boolean {
+  return /[A-Za-z]/.test(value);
+}
+
+function isIdentifierPart(value: string): boolean {
+  return /[A-Za-z]/.test(value);
+}
+
+function isFunctionName(value: string): value is FunctionName {
+  return [
+    'sin',
+    'cos',
+    'tan',
+    'log',
+    'ln',
+    'sqrt',
+    'pow',
+    'root',
+    'nthroot',
+  ].includes(value);
 }
 
 function isWhitespace(value: string): boolean {
