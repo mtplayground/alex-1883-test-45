@@ -1,4 +1,4 @@
-import { useReducer, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { Display } from '../../components';
 import { evaluateExpression } from '../../engine';
 import { BasicKeypad, type BasicOperator } from './keypads/BasicKeypad';
@@ -32,6 +32,29 @@ export function Calculator() {
   const [state, dispatch] = useReducer(calculatorReducer, initialState);
   const [mode, setMode] = useState<CalculatorMode>('basic');
   const isScientificMode = mode === 'scientific';
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (shouldIgnoreKeyboardEvent(event)) {
+        return;
+      }
+
+      const action = getKeyboardAction(event.key);
+
+      if (!action) {
+        return;
+      }
+
+      event.preventDefault();
+      dispatch(action);
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <section
@@ -69,6 +92,76 @@ export function Calculator() {
       />
     </section>
   );
+}
+
+function shouldIgnoreKeyboardEvent(event: KeyboardEvent): boolean {
+  const target = event.target;
+
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  if (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  ) {
+    return true;
+  }
+
+  return (
+    target instanceof HTMLButtonElement &&
+    (event.key === 'Enter' || event.key === ' ')
+  );
+}
+
+function getKeyboardAction(key: string): CalculatorAction | null {
+  if (/^\d$/.test(key)) {
+    return { type: 'digit', value: key };
+  }
+
+  if (key === '.') {
+    return { type: 'decimal' };
+  }
+
+  const operator = getKeyboardOperator(key);
+
+  if (operator) {
+    return { type: 'operator', value: operator };
+  }
+
+  if (key === 'Enter' || key === '=') {
+    return { type: 'evaluate' };
+  }
+
+  if (key === 'Backspace') {
+    return { type: 'delete' };
+  }
+
+  return null;
+}
+
+function getKeyboardOperator(key: string): CalculatorOperator | null {
+  switch (key) {
+    case '+':
+      return '+';
+    case '-':
+      return '−';
+    case '*':
+      return '×';
+    case '/':
+      return '÷';
+    case '%':
+      return '%';
+    case '^':
+      return '^';
+    default:
+      return null;
+  }
 }
 
 interface ModeToggleProps {
