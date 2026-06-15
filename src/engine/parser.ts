@@ -1,4 +1,12 @@
-import type { EvaluateResult, EvaluationError, Operator, Token } from './types';
+import { applyFunction } from './functions';
+import type {
+  EvaluateResult,
+  EvaluationError,
+  FunctionName,
+  Operator,
+  Result,
+  Token,
+} from './types';
 
 export function evaluateTokens(tokens: Token[]): EvaluateResult {
   if (tokens.length === 0) {
@@ -105,7 +113,28 @@ class Parser {
       };
     }
 
-    return this.parsePrimary();
+    return this.parsePower();
+  }
+
+  private parsePower(): EvaluateResult {
+    const left = this.parsePrimary();
+
+    if (!left.ok) {
+      return left;
+    }
+
+    if (!this.isCurrentOperator(['^'])) {
+      return left;
+    }
+
+    const operator = this.consumeOperator();
+    const right = this.parseUnary();
+
+    if (!right.ok) {
+      return right;
+    }
+
+    return applyOperator(left.value, operator, right.value);
   }
 
   private parsePrimary(): EvaluateResult {
@@ -151,10 +180,87 @@ class Parser {
       return result;
     }
 
+    if (token.kind === 'function') {
+      return this.parseFunctionCall(token.value, token.position);
+    }
+
     return {
       ok: false,
       error: unexpectedTokenError(token),
     };
+  }
+
+  private parseFunctionCall(
+    functionName: FunctionName,
+    functionPosition: number,
+  ): EvaluateResult {
+    this.index += 1;
+
+    const openingToken = this.currentToken();
+    if (!openingToken || openingToken.kind !== 'leftParen') {
+      return {
+        ok: false,
+        error: {
+          code: 'UNEXPECTED_TOKEN',
+          message: `${functionName} must be followed by parentheses.`,
+          position: functionPosition,
+        },
+      };
+    }
+
+    this.index += 1;
+    const argsResult = this.parseFunctionArguments(functionPosition);
+
+    if (!argsResult.ok) {
+      return argsResult;
+    }
+
+    return applyFunction(functionName, argsResult.value);
+  }
+
+  private parseFunctionArguments(functionPosition: number): Result<number[]> {
+    const args: number[] = [];
+
+    if (this.currentToken()?.kind === 'rightParen') {
+      this.index += 1;
+      return { ok: true, value: args };
+    }
+
+    while (true) {
+      const expression = this.parseExpression();
+
+      if (!expression.ok) {
+        return expression;
+      }
+
+      args.push(expression.value);
+
+      const token = this.currentToken();
+      if (!token) {
+        return {
+          ok: false,
+          error: {
+            code: 'MISSING_CLOSING_PAREN',
+            message: 'Missing closing parenthesis.',
+            position: functionPosition,
+          },
+        };
+      }
+
+      if (token.kind === 'rightParen') {
+        this.index += 1;
+        return { ok: true, value: args };
+      }
+
+      if (token.kind !== 'comma') {
+        return {
+          ok: false,
+          error: unexpectedTokenError(token),
+        };
+      }
+
+      this.index += 1;
+    }
   }
 
   private isCurrentOperator(operators: Operator[]): boolean {
@@ -219,6 +325,8 @@ function calculate(left: number, operator: Operator, right: number): number {
       return left / right;
     case '%':
       return left % right;
+    case '^':
+      return Math.pow(left, right);
   }
 }
 
