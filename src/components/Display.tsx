@@ -18,7 +18,7 @@ export function Display({
 
   return (
     <section
-      className="rounded-lg border border-slate-800 bg-slate-950 p-4 text-right shadow-inner"
+      className="rounded-lg border border-slate-700 bg-slate-950 p-4 text-right shadow-inner shadow-black/40"
       aria-label="Calculator display"
     >
       <div className="min-h-8">
@@ -33,7 +33,7 @@ export function Display({
           className={
             error
               ? 'break-words font-mono text-xl font-semibold leading-tight text-rose-300'
-              : 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-4xl font-semibold leading-tight text-white tabular-nums'
+              : 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-4xl font-semibold leading-tight text-slate-50 tabular-nums'
           }
           role={error ? 'alert' : undefined}
           title={visibleResult}

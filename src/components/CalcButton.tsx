@@ -20,14 +20,19 @@ export interface CalcButtonProps extends Omit<
 }
 
 const baseClasses =
-  'inline-flex min-h-14 select-none items-center justify-center rounded-lg border px-3 text-lg font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex min-h-14 select-none items-center justify-center rounded-lg border px-3 text-lg font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50';
 
 const variantClasses: Record<CalcButtonVariant, string> = {
-  digit: 'border-slate-200 bg-white text-slate-950 hover:bg-slate-50',
-  operator: 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700',
-  function: 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200',
-  control: 'border-amber-500 bg-amber-100 text-amber-950 hover:bg-amber-200',
-  equals: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700',
+  digit:
+    'border-slate-700 bg-slate-800 text-slate-50 hover:border-slate-600 hover:bg-slate-700',
+  operator:
+    'border-cyan-500 bg-cyan-600 text-slate-950 hover:border-cyan-400 hover:bg-cyan-500',
+  function:
+    'border-violet-500/70 bg-violet-950 text-violet-100 hover:border-violet-400 hover:bg-violet-900',
+  control:
+    'border-amber-500/80 bg-amber-950 text-amber-100 hover:border-amber-400 hover:bg-amber-900',
+  equals:
+    'border-emerald-500 bg-emerald-600 text-slate-950 hover:border-emerald-400 hover:bg-emerald-500',
 };
 
 const sizeClasses: Record<CalcButtonSize, string> = {
@@ -53,7 +58,9 @@ export function CalcButton({
         baseClasses,
         variantClasses[variant],
         sizeClasses[size],
-        isActive ? 'ring-2 ring-blue-500 ring-offset-2' : undefined,
+        isActive
+          ? 'ring-2 ring-cyan-300 ring-offset-2 ring-offset-slate-950'
+          : undefined,
         className,
       )}
     >
