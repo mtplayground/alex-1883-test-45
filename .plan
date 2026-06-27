@@ -1,66 +1,31 @@
-Architecture plan for issues #1-#13
+Architecture plan for Issue #27: Apply a dark theme to the calculator UI
 
-Product context
-- PRODUCT.md is not present in the checkout. The issues describe a React + Vite calculator with Basic and Scientific modes, so the implementation should remain product-name neutral until product copy exists in an issue or PRODUCT.md.
+Project shape and tech stack
+- React 19 + TypeScript single-page calculator app built with Vite.
+- Styling is Tailwind utility classes in JSX plus global Tailwind layers in src/styles.css.
+- No backend, auth, database, or email capability is required for this issue.
+- Validation should use npm run format:check, npm run lint, npm test, and npm run build; Playwright e2e can be run if browser dependencies are available.
 
 Module structure and file organization
-- Project root:
-  - package.json, vite.config.ts, tsconfig*.json for the React + Vite TypeScript app.
-  - eslint.config.js and prettier config for linting and formatting.
-  - tailwind.config.js, postcss.config.js, and src/index.css for Tailwind setup.
-  - README.md and optional .env.example for build/deploy notes.
-- src/:
-  - main.tsx: React entry point.
-  - App.tsx: top-level calculator shell, mode state, and composition.
-  - styles/index.css or index.css: Tailwind layers and global app styles.
-  - components/Display.tsx: expression/result/error presentation.
-  - components/CalcButton.tsx: reusable keypad button with variants and accessible labels.
-  - components/ModeToggle.tsx: Basic/Scientific switch.
-  - features/calculator/Calculator.tsx: state reducer wiring UI events to evaluator.
-  - features/calculator/keypads/BasicKeypad.tsx: numeric and four-function controls.
-  - features/calculator/keypads/ScientificKeypad.tsx: functions, roots, powers, and parentheses.
-  - features/calculator/useKeyboardInput.ts: keyboard mapping and event subscription.
-  - engine/tokenizer.ts: expression tokenization.
-  - engine/parser.ts: precedence-aware parser, likely shunting-yard or recursive descent.
-  - engine/evaluator.ts: public evaluateExpression API.
-  - engine/functions.ts: scientific function implementations and constants.
-  - engine/types.ts: shared Token, Operator, EvalResult, EvalError, and mode/action types.
-  - engine/format.ts: result formatting, overflow/precision rules, display truncation helpers.
-  - test/ or tests/: unit and e2e test setup.
-- tests:
-  - src/engine/*.test.ts for Vitest unit coverage.
-  - e2e/*.spec.ts for Playwright core flows once UI is wired.
+- src/App.tsx: top-level page shell and background. Dark theme work should update the full-page background and preserve centered layout.
+- src/features/calculator/Calculator.tsx: calculator shell, heading, mode toggle, and mode toggle button styles. State/reducer/evaluator logic should remain unchanged.
+- src/components/CalcButton.tsx: reusable button primitive. Update base, focus, disabled, active-ring, and variant classes for digit/operator/function/control/equals buttons.
+- src/components/Display.tsx: display panel and text colors. Preserve aria-labels, aria-live behavior, error role, and monospace numeric layout.
+- src/features/calculator/keypads/*: keypad structure and aria labels should not need changes unless a class from CalcButton is insufficient.
+- src/styles.css: global base colors can be adjusted only if needed; prefer component-level Tailwind classes for the requested scope.
 
-Shared types
-- CalculatorMode = "basic" | "scientific".
-- EvalResult as a discriminated union:
-  - { ok: true; value: number; formatted: string }
-  - { ok: false; error: EvalErrorCode; message: string }
-- Token variants for Number, Operator, Function, LeftParen, RightParen, Percent.
-- CalculatorAction variants for digit, decimal, operator, function, clear, delete, evaluate, toggleMode.
-- ButtonDefinition for keypad rendering: label, input value, action, variant, ariaLabel, optional keyboard aliases.
+Shared types and contracts
+- Existing CalcButtonVariant, CalcButtonSize, CalculatorMode, CalculatorState, and CalculatorAction types remain sufficient.
+- No new shared types are expected for a visual theme change.
+- The evaluateExpression engine and tests under src/engine are unaffected and should not be modified.
 
-Dependencies between issues
-- #1 establishes the React + Vite app and folder layout.
-- #2 depends on #1 and adds Tailwind, ESLint, Prettier, and global styles.
-- #3 depends on #1 and creates the core evaluator API used by every UI issue.
-- #4 depends on #3 and extends the same evaluator/function registry.
-- #5 depends on #3 and #4, and should be expanded as evaluator behavior grows.
-- #6 depends on #1/#2 and creates reusable display/button primitives.
-- #7 depends on #3 and #6, implementing Basic UI and connecting expression state to the engine.
-- #8 depends on #4 and #6/#7, adding Scientific controls with the same state/action contract.
-- #9 depends on #7 and #8, switching active keypad while preserving a coherent expression/result state.
-- #10 depends on #7/#9, mapping keyboard events into the same CalculatorAction path as button clicks.
-- #11 depends on #7-#10, covering basic calculation, scientific calculation, mode switching, and keyboard input.
-- #12 depends on evaluator and UI completion, polishing errors, overflow, and long display behavior.
-- #13 depends on a stable app/test setup, adding production build validation and static hosting notes.
+Issue dependency plan
+- There is only one issue in this batch, so there are no cross-issue dependencies.
+- The implementation is isolated to UI styling and should not alter calculator behavior, keyboard shortcuts, error messages, or evaluator semantics.
 
 Key design decisions
-- Use TypeScript from the initial Vite setup so evaluator and UI actions share explicit contracts.
-- Keep calculation logic framework-independent under src/engine so it can be unit tested without React.
-- Use a parser-based evaluator instead of evaluating JavaScript strings. This avoids injection risks and gives precise control over operators, functions, percent, parentheses, and error messages.
-- Prefer recursive descent or shunting-yard with a small function registry. Either keeps #3 and #4 naturally incremental.
-- Route all button and keyboard input through one reducer/action layer so Basic, Scientific, and keyboard behavior stay consistent.
-- Represent errors as structured codes internally and format them at the display boundary.
-- Centralize number formatting to handle precision, very large/small numbers, and display overflow consistently.
-- Add tests close to the behavior they protect: Vitest for engine rules and Playwright for user flows after the UI is assembled.
+- Use a cohesive dark palette with accessible contrast across page, shell, toggles, buttons, and display.
+- Keep high-visibility focus rings for keyboard accessibility.
+- Maintain distinct semantic button colors: digits neutral dark, operators primary/accent, functions secondary, controls warning/destructive, equals success.
+- Preserve layout dimensions and responsive behavior so existing e2e selectors and accessible names continue to pass.
+- Avoid introducing a theme system unless needed; the issue asks for applying a dark theme, not user-selectable themes.
